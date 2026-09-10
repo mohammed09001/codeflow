@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codeflow-ml"
+version = "0.1.0"
+description = "Optional deterministic and learned analysis support for CodeFlow"
+requires-python = ">=3.11,<3.15"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/codeflow_ml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pyright]
+include = ["python"]
+typeCheckingMode = "basic"

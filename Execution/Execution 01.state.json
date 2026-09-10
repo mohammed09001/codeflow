@@ -1,0 +1,23 @@
+{
+  "execution": "CodeFlow Execution 01",
+  "schema_version": 1,
+  "current_phase": "01",
+  "phases": {
+    "00": {
+      "status": "complete",
+      "tests": [
+        "python -m unittest discover -s scripts/tests -v",
+        "python scripts/harness.py self-audit",
+        "python scripts/no_llm_guard.py"
+      ],
+      "artifacts": ["schemas/phase-evidence.schema.json", "scripts/commands.json", "Execution/evidence/phase-00.json"],
+      "benchmark_results": [],
+      "deviations": [],
+      "critical_schema_hashes": {}
+    }
+  },
+  "blocked_items": [],
+  "accepted_deviations": [],
+  "tool_versions": {"python": "3.14.6", "rust": "unavailable", "cargo": "unavailable"},
+  "last_verified_commit": null
+}
