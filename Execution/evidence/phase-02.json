@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": "02",
+  "completed_at": "2026-09-10T17:20:00+04:00",
+  "files_changed": ["crates/codeflow-core/Cargo.toml", "crates/codeflow-core/src/lib.rs", "Cargo.toml", "Cargo.lock"],
+  "commands_run": ["cargo fmt --check", "cargo test --workspace --all-features", "cargo clippy --workspace --all-targets --all-features -- -D warnings"],
+  "tests": ["codeflow-core: 5 passed"],
+  "test_outcomes": [{"name": "deterministic IDs and content identity", "status": "passed"}, {"name": "path traversal rejection", "status": "passed"}, {"name": "span/confidence validation", "status": "passed"}, {"name": "versioned serialization", "status": "passed"}],
+  "benchmark_outcomes": [],
+  "known_limitations": [],
+  "no_llm_compliance": true,
+  "schema_changes": ["Added CodeFlow core schema version 1 with canonical IDs, source identities, spans, capabilities, truth classes, and confidence."],
+  "next_phase_dependencies": ["ProjectId", "RevisionId", "SourceIdentity", "SourceSpan"]
+}

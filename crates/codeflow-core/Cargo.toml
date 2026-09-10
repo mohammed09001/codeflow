@@ -1,0 +1,14 @@
+[package]
+name = "codeflow-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+blake3 = "1.8.2"
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+
+[dev-dependencies]
+serde_json = "1.0.140"

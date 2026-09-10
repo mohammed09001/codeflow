@@ -1,7 +1,7 @@
 {
   "execution": "CodeFlow Execution 01",
   "schema_version": 1,
-  "current_phase": "01",
+  "current_phase": "05",
   "phases": {
     "00": {
       "status": "complete",
@@ -14,10 +14,50 @@
       "benchmark_results": [],
       "deviations": [],
       "critical_schema_hashes": {}
+    },
+    "01": {
+      "status": "complete",
+      "tests": [
+        "python -m unittest discover -s scripts/tests -v (passed: 4)",
+        "python scripts/harness.py self-audit (passed)",
+        "uv lock (passed)"
+      ],
+      "artifacts": ["Cargo.toml", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "scripts/run.py", ".github/workflows/verify.yml"],
+      "benchmark_results": [],
+      "deviations": [],
+      "critical_schema_hashes": {}
+    },
+    "02": {
+      "status": "complete",
+      "tests": [
+        "cargo fmt --check (passed)",
+        "cargo test --workspace --all-features (passed: 5)",
+        "cargo clippy --workspace --all-targets --all-features -- -D warnings (passed)"
+      ],
+      "artifacts": ["crates/codeflow-core/src/lib.rs", "Cargo.lock", "Execution/evidence/phase-02.json"],
+      "benchmark_results": [],
+      "deviations": [],
+      "critical_schema_hashes": {"core_schema_version": "1"}
+    },
+    "03": {
+      "status": "complete",
+      "tests": ["cargo fmt --check (passed)", "cargo test --workspace --all-features (passed: 7)", "cargo clippy --workspace --all-targets --all-features -- -D warnings (passed)"],
+      "artifacts": ["crates/codeflow-project/src/lib.rs", "Execution/evidence/phase-03.json"],
+      "benchmark_results": [],
+      "deviations": [],
+      "critical_schema_hashes": {"project_schema_version": "1"}
+    },
+    "04": {
+      "status": "complete",
+      "tests": ["cargo fmt --check (passed)", "cargo test --workspace --all-features (passed: 10)", "cargo clippy --workspace --all-targets --all-features -- -D warnings (passed)"],
+      "artifacts": ["crates/codeflow-analysis/src/lib.rs", "Execution/evidence/phase-04.json"],
+      "benchmark_results": [],
+      "deviations": ["Rust grammar is implemented; unsupported languages return typed capability errors until their grammar adapters are added."],
+      "critical_schema_hashes": {"syntax_schema_version": "1"}
     }
   },
   "blocked_items": [],
   "accepted_deviations": [],
   "tool_versions": {"python": "3.14.6", "rust": "unavailable", "cargo": "unavailable"},
-  "last_verified_commit": null
+  "last_verified_commit": "4ae2170"
 }

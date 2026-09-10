@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": "01",
+  "completed_at": "2026-09-10T17:20:00+04:00",
+  "files_changed": ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "pyproject.toml", "uv.lock", "python/codeflow_ml/__init__.py", "scripts/run.py", ".github/workflows/verify.yml", "README.md", "LICENSE", "NOTICE", ".gitignore"],
+  "commands_run": ["rustup toolchain install 1.88.0 --profile minimal", "uv lock", "cargo fmt --check", "cargo test --workspace --all-features", "cargo clippy --workspace --all-targets --all-features -- -D warnings", "python -m unittest discover -s scripts/tests -v", "python scripts/harness.py self-audit", "python scripts/no_llm_guard.py", "git diff --check"],
+  "tests": ["Rust workspace test suite: 5 passed", "Python harness suite: 4 passed", "no-LLM guard: passed"],
+  "test_outcomes": [{"name": "workspace formatting", "status": "passed"}, {"name": "workspace lint", "status": "passed"}, {"name": "workspace tests", "status": "passed", "count": 5}, {"name": "Python harness", "status": "passed", "count": 4}],
+  "benchmark_outcomes": [],
+  "known_limitations": ["CI matrix is defined but has not run remotely from this local workspace."],
+  "no_llm_compliance": true,
+  "schema_changes": ["Pinned Rust 1.88.0 and Python >=3.11,<3.15 workspace contracts."],
+  "next_phase_dependencies": ["codeflow-core canonical types"]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": "04",
+  "completed_at": "2026-09-10T17:40:00+04:00",
+  "files_changed": ["Cargo.toml", "Cargo.lock", "crates/codeflow-analysis/Cargo.toml", "crates/codeflow-analysis/src/lib.rs"],
+  "commands_run": ["cargo update -p tree-sitter-language --precise 0.1.7", "cargo fmt --check", "cargo test --workspace --all-features", "cargo clippy --workspace --all-targets --all-features -- -D warnings", "python scripts/harness.py self-audit", "python scripts/no_llm_guard.py", "git diff --check"],
+  "tests": ["codeflow-analysis: 3 passed", "full workspace: 10 passed"],
+  "test_outcomes": [{"name": "normalized Rust syntax evidence", "status": "passed"}, {"name": "syntax-error recovery", "status": "passed"}, {"name": "unsupported grammar capability error", "status": "passed"}],
+  "benchmark_outcomes": [],
+  "known_limitations": ["Only Rust grammar is installed in this first parser adapter; this degrades explicitly by capability rather than failing repository intake."],
+  "no_llm_compliance": true,
+  "schema_changes": ["Added syntax evidence schema version 1."],
+  "next_phase_dependencies": ["SyntaxEvidence", "ParserProvider"]
+}
