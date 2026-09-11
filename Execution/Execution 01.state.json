@@ -1,7 +1,7 @@
 {
   "execution": "CodeFlow Execution 01",
   "schema_version": 1,
-  "current_phase": "30",
+  "current_phase": "31",
   "phases": {
     "00": {
       "status": "complete",
@@ -94,6 +94,7 @@
     ,"27":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 15)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/query.py","python/codeflow_ml/test_query.py","Execution/evidence/phase-27.json"],"benchmark_results":["query budget enforcement passed"],"deviations":["Query primitives define backend contracts; transport/auth remain separate."],"critical_schema_hashes":{"query_view_schema_version":"1"}}
     ,"28":{"status":"complete","tests":["python -m unittest scripts.tests.test_cli python.codeflow_ml.test_api -v (passed: 2)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/api.py","python/codeflow_ml/test_api.py","scripts/codeflow.py","scripts/tests/test_cli.py","Execution/evidence/phase-28.json"],"benchmark_results":[],"deviations":["Offline CLI/API contracts are transport-neutral and delegate analysis to Rust engines."],"critical_schema_hashes":{"api_schema_version":"v1"}}
     ,"29":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_resources python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 16)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/resources.py","python/codeflow_ml/test_resources.py","Execution/evidence/phase-29.json"],"benchmark_results":["bounded large-repository strategy passed"],"deviations":["GPU selection is capability-based and does not require a GPU dependency."],"critical_schema_hashes":{"resource_governance_schema_version":"1"}}
+    ,"30":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_security python.codeflow_ml.test_resources python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 17)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/security.py","python/codeflow_ml/test_security.py","Execution/evidence/phase-30.json"],"benchmark_results":[],"deviations":["OS sandboxing remains deployment-level; application guards are enforced."],"critical_schema_hashes":{"security_schema_version":"1"}}
   },
   "blocked_items": [],
   "accepted_deviations": [],
