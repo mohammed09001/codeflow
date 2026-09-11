@@ -80,6 +80,8 @@ pub struct TreeSitterProvider {
     parser: Parser,
     cache: HashMap<codeflow_core::SourceBlobId, SyntaxEvidence>,
     sessions: HashMap<codeflow_core::SourceBlobId, ParseSession>,
+    #[cfg(test)]
+    parse_reused_edited_tree: Vec<bool>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -520,6 +522,8 @@ impl TreeSitterProvider {
             parser: Parser::new(),
             cache: HashMap::new(),
             sessions: HashMap::new(),
+            #[cfg(test)]
+            parse_reused_edited_tree: Vec::new(),
         }
     }
 
@@ -566,6 +570,8 @@ impl TreeSitterProvider {
             .parser
             .parse(bytes, Some(&edited_tree))
             .ok_or(ParseError::Cancelled)?;
+        #[cfg(test)]
+        self.parse_reused_edited_tree.push(true);
         Ok(self.record_parse(source, language, tree))
     }
 
@@ -628,6 +634,8 @@ impl ParserProvider for TreeSitterProvider {
             .parser
             .parse(bytes, None)
             .ok_or(ParseError::Cancelled)?;
+        #[cfg(test)]
+        self.parse_reused_edited_tree.push(false);
         Ok(self.record_parse(source, language, tree))
     }
 }
@@ -840,6 +848,10 @@ mod tests {
         let mut clean = TreeSitterProvider::new();
         let clean_evidence = clean.parse(after_source, Language::Python, after).unwrap();
         assert_eq!(incremental_evidence, clean_evidence);
+        assert_eq!(incremental.parse_reused_edited_tree, vec![false, true]);
+        // Negative control: equivalent evidence from a clean parse is not proof
+        // that an edited tree was reused.
+        assert_eq!(clean.parse_reused_edited_tree, vec![false]);
     }
 
     #[test]

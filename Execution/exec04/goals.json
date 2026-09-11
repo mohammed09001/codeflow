@@ -1,0 +1,23 @@
+{
+  "execution": "04",
+  "schema_version": 1,
+  "goals": [
+    {"id": "G00", "title": "Baseline and state reconciliation", "status": "PASS", "depends_on": [], "verifier": "scripts/exec04/verify_G00_baseline.py", "proof_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62", "proof_file": "Execution/exec04/proof/G00.json"},
+    {"id": "G01", "title": "Parser closure proof", "status": "PASS", "depends_on": ["G00"], "verifier": "scripts/exec04/verify_G01_parser.py", "proof_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62", "proof_file": "Execution/exec04/proof/G01.json"},
+    {"id": "G02", "title": "Parse-aware framework semantics", "status": "ACTIVE", "depends_on": ["G01"], "verifier": "scripts/exec04/verify_G02_frameworks.py", "proof_sha": null, "proof_file": null},
+    {"id": "G03", "title": "Real graph algorithms", "status": "OPEN", "depends_on": ["G00"], "verifier": "scripts/exec04/verify_G03_graph_algorithms.py", "proof_sha": null, "proof_file": null},
+    {"id": "G04", "title": "Truthful classical ML", "status": "OPEN", "depends_on": ["G00"], "verifier": "scripts/exec04/verify_G04_classical_ml.py", "proof_sha": null, "proof_file": null},
+    {"id": "G05", "title": "Trainable graph learning", "status": "OPEN", "depends_on": ["G00"], "verifier": "scripts/exec04/verify_G05_graph_learning.py", "proof_sha": null, "proof_file": null},
+    {"id": "G06", "title": "Model retention gate", "status": "OPEN", "depends_on": ["G05"], "verifier": "scripts/exec04/verify_G06_model_retention.py", "proof_sha": null, "proof_file": null},
+    {"id": "G07", "title": "Workflow and runtime truth closure", "status": "OPEN", "depends_on": ["G01", "G02", "G03"], "verifier": "scripts/exec04/verify_G07_workflow_runtime.py", "proof_sha": null, "proof_file": null},
+    {"id": "G08", "title": "Freeze frontend view contract v1", "status": "OPEN", "depends_on": ["G07"], "verifier": "scripts/exec04/verify_G08_frontend_contracts.py", "proof_sha": null, "proof_file": null},
+    {"id": "G09", "title": "Production codeflowd", "status": "OPEN", "depends_on": ["G08"], "verifier": "scripts/exec04/verify_G09_codeflowd.py", "proof_sha": null, "proof_file": null},
+    {"id": "G10", "title": "Real HTTP API v1", "status": "OPEN", "depends_on": ["G09"], "verifier": "scripts/exec04/verify_G10_http.py", "proof_sha": null, "proof_file": null},
+    {"id": "G11", "title": "SSE revision stream", "status": "OPEN", "depends_on": ["G10"], "verifier": "scripts/exec04/verify_G11_sse.py", "proof_sha": null, "proof_file": null},
+    {"id": "G12", "title": "Real CLI", "status": "OPEN", "depends_on": ["G11"], "verifier": "scripts/exec04/verify_G12_cli.py", "proof_sha": null, "proof_file": null},
+    {"id": "G13", "title": "Security, privacy, and resource closure", "status": "OPEN", "depends_on": ["G09", "G10", "G11", "G12"], "verifier": "scripts/exec04/verify_G13_security_resources.py", "proof_sha": null, "proof_file": null},
+    {"id": "G14", "title": "Packaging and clean-machine proof", "status": "OPEN", "depends_on": ["G13"], "verifier": "scripts/exec04/verify_G14_packaging.py", "proof_sha": null, "proof_file": null},
+    {"id": "G15", "title": "Product CI contract", "status": "OPEN", "depends_on": ["G14"], "verifier": "scripts/exec04/verify_G15_product_ci_contract.py", "proof_sha": null, "proof_file": null},
+    {"id": "G16", "title": "Final same-SHA system acceptance", "status": "OPEN", "depends_on": ["G15", "G04", "G06"], "verifier": "scripts/exec04/verify_G16_final_system.py", "proof_sha": null, "proof_file": null}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "execution": "04",
+  "schema_version": 1,
+  "source_document": "Execution/CodeFlow_Execution_04.md",
+  "current_goal": "G02",
+  "frontend_readiness": "NOT_READY",
+  "baseline_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62",
+  "working_tree": {"tracked_changes": [], "untracked_changes": ["Execution/CodeFlow_Execution_04.md"]},
+  "baseline_facts": [
+    "Execution 03 state is at phase 01 although multi-language Tree-sitter registration and edited-tree incremental parsing are present.",
+    "Framework detection still derives deterministic facts from source.contains markers.",
+    "The CI workflow invokes the legacy self-audit diagnostic.",
+    "No Execution 04 goal is treated as passed by this baseline record."
+  ],
+  "last_verified_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62"
+}

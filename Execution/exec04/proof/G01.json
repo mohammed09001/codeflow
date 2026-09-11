@@ -1,0 +1,19 @@
+{
+  "goal": "G01",
+  "status": "PASS",
+  "proof_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62",
+  "verifier": "scripts/exec04/verify_G01_parser.py",
+  "verifier_exit_code": 0,
+  "commands": [
+    {"command": "C:/Users/mmaq0/.cargo/bin/cargo.exe fmt --check", "exit_code": 0},
+    {"command": "python scripts/exec04/verify_G01_parser.py", "exit_code": 0}
+  ],
+  "tests": [
+    "every_declared_language_has_a_production_grammar_and_recovers",
+    "incremental_parse_reuses_edited_tree_and_matches_clean_parse"
+  ],
+  "metrics": {"languages_passed": 10, "incremental_equivalence": true, "old_tree_reuse_proven": true},
+  "negative_controls": ["A clean parse produces equal normalized evidence but records no edited-tree reuse."],
+  "artifacts": ["crates/codeflow-analysis/src/lib.rs"],
+  "limitations": ["Proof was executed against the current working tree at the stated HEAD; the workspace changes remain uncommitted."]
+}

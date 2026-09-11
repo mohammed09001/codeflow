@@ -1,0 +1,22 @@
+{
+  "goal": "G00",
+  "status": "PASS",
+  "proof_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62",
+  "verifier": "scripts/exec04/verify_G00_baseline.py",
+  "verifier_exit_code": 0,
+  "commands": [
+    {"command": "python scripts/exec04/verify_G00_baseline.py", "exit_code": 0},
+    {"command": "python scripts/harness.py self-audit", "exit_code": 0},
+    {"command": "python -m unittest discover -s scripts/tests -v", "exit_code": 0, "outcome": "5 passed"},
+    {"command": "python -m unittest discover -s python -p test_*.py -v", "exit_code": 0, "outcome": "19 passed"},
+    {"command": "python scripts/no_llm_guard.py", "exit_code": 0},
+    {"command": "C:/Users/mmaq0/.cargo/bin/cargo.exe fmt --check", "exit_code": 0},
+    {"command": "C:/Users/mmaq0/.cargo/bin/cargo.exe clippy --workspace --all-targets --all-features -- -D warnings", "exit_code": 0},
+    {"command": "C:/Users/mmaq0/.cargo/bin/cargo.exe test --workspace --all-features", "exit_code": 0, "outcome": "40 unit tests passed"}
+  ],
+  "tests": ["Rust workspace checks passed", "Python/script baseline: 24 tests passed"],
+  "metrics": {"rust_unit_tests": 40, "python_and_script_tests": 24},
+  "negative_controls": [],
+  "artifacts": ["Execution/exec04/goals.json", "Execution/exec04/state.json"],
+  "limitations": ["cargo is not on PATH in this PowerShell environment; the pinned executable was used.", "The supplied Execution 04 article and the new execution records are uncommitted working-tree changes and are not represented as remote Git truth."]
+}

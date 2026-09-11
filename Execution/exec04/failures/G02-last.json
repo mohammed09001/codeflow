@@ -1,0 +1,10 @@
+{
+  "goal": "G02",
+  "status": "FAIL",
+  "proof_sha": "5781ddc7e0485776f7a06a54ff63791288dc6a62",
+  "verifier": "scripts/exec04/verify_G02_frameworks.py",
+  "verifier_exit_code": 1,
+  "observed_at": "2026-09-11",
+  "root_cause": "DeterministicWebAdapter derives deterministic route facts from raw source.contains marker matches rather than parsed syntax.",
+  "next_action": "Replace marker detection with language-aware AST/query extraction and add positive and deceptive-negative route fixtures."
+}
