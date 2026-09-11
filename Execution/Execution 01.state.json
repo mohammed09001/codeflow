@@ -1,7 +1,7 @@
 {
   "execution": "CodeFlow Execution 01",
   "schema_version": 1,
-  "current_phase": "32",
+  "current_phase": "33",
   "phases": {
     "00": {
       "status": "complete",
@@ -96,6 +96,7 @@
     ,"29":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_resources python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 16)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/resources.py","python/codeflow_ml/test_resources.py","Execution/evidence/phase-29.json"],"benchmark_results":["bounded large-repository strategy passed"],"deviations":["GPU selection is capability-based and does not require a GPU dependency."],"critical_schema_hashes":{"resource_governance_schema_version":"1"}}
     ,"30":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_security python.codeflow_ml.test_resources python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 17)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/security.py","python/codeflow_ml/test_security.py","Execution/evidence/phase-30.json"],"benchmark_results":[],"deviations":["OS sandboxing remains deployment-level; application guards are enforced."],"critical_schema_hashes":{"security_schema_version":"1"}}
     ,"31":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_observability python.codeflow_ml.test_security python.codeflow_ml.test_resources python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 18)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/observability.py","python/codeflow_ml/test_observability.py","Execution/evidence/phase-31.json"],"benchmark_results":[],"deviations":["Diagnostic bundles intentionally contain metadata and no source content."],"critical_schema_hashes":{"diagnostics_schema_version":"1"}}
+    ,"32":{"status":"complete","tests":["python scripts/test_release.py (passed)","python -m compileall -q python scripts (passed)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["packaging/release-artifacts.json","scripts/install.ps1","scripts/test_release.py","Execution/evidence/phase-32.json"],"benchmark_results":[],"deviations":["Native non-Windows binaries require target CI runners."],"critical_schema_hashes":{"release_matrix_schema_version":"1"}}
   },
   "blocked_items": [],
   "accepted_deviations": [],
