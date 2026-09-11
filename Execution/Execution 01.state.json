@@ -103,5 +103,5 @@
   "blocked_items": [],
   "accepted_deviations": [],
   "tool_versions": {"python": "3.14.6", "rust": "1.88.0", "cargo": "1.88.0"},
-  "last_verified_commit": "eee17da"
+  "last_verified_commit": "070b75d"
 }
