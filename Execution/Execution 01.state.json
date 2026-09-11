@@ -1,7 +1,7 @@
 {
   "execution": "CodeFlow Execution 01",
   "schema_version": 1,
-  "current_phase": "28",
+  "current_phase": "29",
   "phases": {
     "00": {
       "status": "complete",
@@ -92,6 +92,7 @@
     ,"25":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 13)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/baselines.py","python/codeflow_ml/test_baselines.py","Execution/evidence/phase-25.json"],"benchmark_results":["fusion ablation determinism passed"],"deviations":["Interpretable fusion preserves unknown and never overrides deterministic evidence."],"critical_schema_hashes":{"fusion_schema_version":"1"}}
     ,"26":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 14)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/zoom.py","python/codeflow_ml/test_zoom.py","Execution/evidence/phase-26.json"],"benchmark_results":["bounded materialization passed"],"deviations":["Zoom backend emits stable tuples; frontend remains out of scope."],"critical_schema_hashes":{"zoom_schema_version":"1"}}
     ,"27":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_query python.codeflow_ml.test_zoom python.codeflow_ml.test_baselines python.codeflow_ml.test_graph_data python.codeflow_ml.test_experiments python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows -v (passed: 15)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/query.py","python/codeflow_ml/test_query.py","Execution/evidence/phase-27.json"],"benchmark_results":["query budget enforcement passed"],"deviations":["Query primitives define backend contracts; transport/auth remain separate."],"critical_schema_hashes":{"query_view_schema_version":"1"}}
+    ,"28":{"status":"complete","tests":["python -m unittest scripts.tests.test_cli python.codeflow_ml.test_api -v (passed: 2)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/api.py","python/codeflow_ml/test_api.py","scripts/codeflow.py","scripts/tests/test_cli.py","Execution/evidence/phase-28.json"],"benchmark_results":[],"deviations":["Offline CLI/API contracts are transport-neutral and delegate analysis to Rust engines."],"critical_schema_hashes":{"api_schema_version":"v1"}}
   },
   "blocked_items": [],
   "accepted_deviations": [],
