@@ -38,6 +38,45 @@ class FeatureCandidate:
         return signal_quality((self.structural, self.lexical, self.entry_point, self.side_effect, self.scenario))
 
 
+@dataclass(frozen=True)
+class SignalVector:
+    structural: float = 0.0
+    lexical: float = 0.0
+    organizational: float = 0.0
+    runtime: float = 0.0
+    classical_ml: float = 0.0
+    deep_learning: float = 0.0
+
+    def values(self) -> tuple[float, ...]:
+        return (self.structural, self.lexical, self.organizational, self.runtime, self.classical_ml, self.deep_learning)
+
+
+def fuse_signals(signal: SignalVector, weights: Sequence[float] | None = None) -> tuple[float, bool]:
+    values = signal.values()
+    weights = tuple(weights) if weights is not None else adaptive_weights([1.0] * len(values))
+    if len(weights) != len(values):
+        raise ValueError("signal weights differ")
+    score = sum(value * weight for value, weight in zip(values, weights))
+    spread = max(values, default=0.0) - min(values, default=0.0)
+    return max(0.0, min(1.0, score)), spread > 0.7
+
+
+def calibration_curve(predicted: Sequence[float], observed: Sequence[bool], bins: int = 10) -> tuple[tuple[float, float, int], ...]:
+    if len(predicted) != len(observed) or bins <= 0:
+        raise ValueError("calibration inputs invalid")
+    result = []
+    for index in range(bins):
+        members = [(score, truth) for score, truth in zip(predicted, observed) if min(bins - 1, int(score * bins)) == index]
+        if members:
+            result.append((sum(score for score, _ in members) / len(members), sum(truth for _, truth in members) / len(members), len(members)))
+    return tuple(result)
+
+
+def evidence_summary(signal: SignalVector) -> dict[str, object]:
+    score, contradictory = fuse_signals(signal)
+    return {"score": score, "contradictory": contradictory, "signals": signal.values()}
+
+
 def seed_feature(entry_point: str, entity_id: str, feature_id: str) -> FeatureCandidate:
     return FeatureCandidate(feature_id, entity_id, 0.0, 0.0, entry_point=1.0)
 

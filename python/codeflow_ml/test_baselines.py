@@ -1,6 +1,6 @@
 import unittest
 
-from .baselines import FeatureCandidate, FeatureMatrix, LogisticBaseline, NaiveBayes, adaptive_weights, classify_shared_name, clustering_ensemble, domain_specificity, feature_participation, infrastructure_centrality, merge_feature_candidates, seed_feature, signal_quality, tree_rank
+from .baselines import FeatureCandidate, FeatureMatrix, LogisticBaseline, NaiveBayes, SignalVector, adaptive_weights, calibration_curve, classify_shared_name, clustering_ensemble, domain_specificity, evidence_summary, feature_participation, fuse_signals, infrastructure_centrality, merge_feature_candidates, seed_feature, signal_quality, tree_rank
 
 
 class BaselineTests(unittest.TestCase):
@@ -33,3 +33,10 @@ class BaselineTests(unittest.TestCase):
         self.assertGreater(domain_specificity("checkout_service", ["checkout"]), domain_specificity("common_util", ["checkout"], ["util"]))
         self.assertEqual(feature_participation({"db": ["a", "a", "b"]})["db"], 2)
         self.assertEqual(classify_shared_name("event_bus"), "messaging")
+
+    def test_signal_fusion_calibration_and_contradictions(self):
+        score, contradictory = fuse_signals(SignalVector(structural=1.0, lexical=0.0))
+        self.assertAlmostEqual(score, 1 / 6)
+        self.assertTrue(contradictory)
+        self.assertEqual(len(calibration_curve([0.1, 0.9], [False, True])), 2)
+        self.assertIn("signals", evidence_summary(SignalVector()))
