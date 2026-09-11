@@ -2,7 +2,7 @@
 //! These types deliberately contain no provider-local identifier or source text.
 
 use std::fmt;
-use std::path::{Component, Path};
+use std::path::Path;
 
 use blake3::Hasher;
 use serde::{Deserialize, Serialize};
@@ -85,14 +85,28 @@ impl SourceIdentity {
 }
 
 pub fn normalize_relative_path(path: &Path) -> Result<String, IdentityError> {
+    // `Path::components` deliberately follows the host platform. Canonical source
+    // identities must not: a Windows-rooted path is unsafe on a Unix host too.
+    let portable = path.to_string_lossy().replace('\\', "/");
+    if portable.starts_with('/')
+        || portable
+            .as_bytes()
+            .get(1)
+            .is_some_and(|separator| *separator == b':')
+            && portable
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_alphabetic)
+    {
+        return Err(IdentityError::NonRelativePath);
+    }
+
     let mut components = Vec::new();
-    for component in path.components() {
+    for component in portable.split('/') {
         match component {
-            Component::Normal(part) => components.push(part.to_string_lossy().replace('\\', "/")),
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
-                return Err(IdentityError::NonRelativePath);
-            }
+            "" | "." => {}
+            ".." => return Err(IdentityError::NonRelativePath),
+            component => components.push(component),
         }
     }
     if components.is_empty() {
@@ -285,8 +299,32 @@ mod tests {
     }
     #[test]
     fn absolute_and_parent_paths_are_rejected() {
-        assert!(normalize_relative_path(Path::new("../secret")).is_err());
-        assert!(normalize_relative_path(Path::new("C:/secret")).is_err());
+        for path in [
+            "",
+            ".",
+            "../secret",
+            "src/../secret",
+            "/secret",
+            "\\secret",
+            "C:/secret",
+            "C:\\secret",
+            "C:secret",
+            "//server/share",
+            "\\\\server\\share",
+            "\\\\?\\C:\\secret",
+        ] {
+            assert!(normalize_relative_path(Path::new(path)).is_err(), "{path}");
+        }
+    }
+    #[test]
+    fn portable_relative_path_normalization_is_host_independent() {
+        for (input, expected) in [
+            ("src/lib.rs", "src/lib.rs"),
+            ("src\\lib.rs", "src/lib.rs"),
+            ("./src//nested/./lib.rs", "src/nested/lib.rs"),
+        ] {
+            assert_eq!(normalize_relative_path(Path::new(input)).unwrap(), expected);
+        }
     }
     #[test]
     fn spans_and_confidence_validate() {

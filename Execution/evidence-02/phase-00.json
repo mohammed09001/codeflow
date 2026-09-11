@@ -1,0 +1,70 @@
+{
+  "execution": "02",
+  "phase": "00",
+  "status": "complete",
+  "baseline_defect": [
+    "cargo and rustup are absent from PATH, but the pinned executables are installed under C:\\Users\\mmaq0\\.cargo\\bin and can be invoked directly.",
+    "Portable path validation uses host-dependent Path::is_absolute semantics.",
+    "The parser runtime links only tree-sitter-rust and has no retained-tree incremental parse API.",
+    "Framework detection is marker/string based.",
+    "The agglomerative baseline delegates to leiden_baseline and HDBSCAN is a degree filter over it.",
+    "Graph encoder functions are deterministic transforms rather than trainable models.",
+    "No codeflowd binary, HTTP server, or revision event stream exists.",
+    "The CLI exposes command names but only init creates project state; other commands print metadata."
+  ],
+  "files_changed": [
+    "Execution/Execution 02.state.json",
+    "Execution/evidence-02/phase-00.json"
+  ],
+  "commands_run": [
+    {"command": "git status --short", "exit_code": 0},
+    {"command": "git rev-parse --abbrev-ref HEAD", "exit_code": 0, "output": "main"},
+    {"command": "git rev-parse HEAD", "exit_code": 0, "output": "e8b38014f2707549cb5406537a9c5e71abe790fe"},
+    {"command": "cargo fmt --check", "exit_code": 1, "outcome": "cargo not found on PATH; resolved with the pinned executable"},
+    {"command": "C:\\Users\\mmaq0\\.cargo\\bin\\cargo.exe --version", "exit_code": 0, "outcome": "cargo 1.88.0"},
+    {"command": "C:\\Users\\mmaq0\\.cargo\\bin\\rustc.exe --version", "exit_code": 0, "outcome": "rustc 1.88.0"},
+    {"command": "python -m unittest discover -s scripts/tests -v", "exit_code": 0, "outcome": "5 tests passed"},
+    {"command": "python -m unittest discover -s python -p test_*.py -v", "exit_code": 0, "outcome": "19 tests passed"},
+    {"command": "python scripts/harness.py self-audit", "exit_code": 0, "outcome": "PASS"},
+    {"command": "python scripts/no_llm_guard.py", "exit_code": 0, "outcome": "PASS"},
+    {"command": "git diff --check", "exit_code": 0}
+  ],
+  "tests": [
+    "scripts test discovery: passed (5)",
+    "Python package test discovery: passed (19)",
+    "harness self-audit: passed",
+    "no-LLM guard: passed",
+    "Rust format, lint, and test baseline: deferred until Phase 01 correction; the pinned local toolchain is available outside PATH"
+  ],
+  "benchmark_results": [],
+  "contract_or_schema_changes": [],
+  "public_contract_inventory": {
+    "rust": ["CORE_SCHEMA_VERSION=1", "PROJECT_SCHEMA_VERSION=1", "SYNTAX_SCHEMA_VERSION=1", "UPSM_SCHEMA_VERSION=1", "HAG_SCHEMA_VERSION=1", "ProjectStore"],
+    "python": ["SCHEMA_VERSION=1", "API_VERSION=v1"],
+    "cli": ["codeflow init", "codeflow analyze", "codeflow watch", "codeflow status", "codeflow graph", "codeflow evidence"],
+    "boundaries_to_preserve": ["stable canonical IDs", "UPSM/HAG separation", "EvidenceRecord provenance", "explicit UNKNOWN", "SQLite-backed ProjectStore"]
+  },
+  "defect_registry": [
+    {"defect": "cross-platform path validation", "primary_phase": "01", "depends_on": ["15", "16", "17"]},
+    {"defect": "Linux/macOS CI verification", "primary_phase": "01", "depends_on": ["16", "17"]},
+    {"defect": "parser language coverage and true incremental parsing", "primary_phase": "02", "depends_on": ["11", "12", "14", "17"]},
+    {"defect": "syntax-aware framework semantics", "primary_phase": "03", "depends_on": ["02", "17"]},
+    {"defect": "truthful graph algorithms", "primary_phase": "04", "depends_on": ["17"]},
+    {"defect": "truthful classical ML", "primary_phase": "05", "depends_on": ["06", "17"]},
+    {"defect": "trainable graph learning and model retention", "primary_phase": "06", "depends_on": ["05", "17"]},
+    {"defect": "model-comparison gate", "primary_phase": "07", "depends_on": ["05", "06", "17"]},
+    {"defect": "bounded workflow/runtime reconstruction", "primary_phase": "08", "depends_on": ["02", "04", "17"]},
+    {"defect": "frontend view contract freeze", "primary_phase": "10", "depends_on": ["02", "04", "08", "12", "13", "14", "17"]},
+    {"defect": "codeflowd lifecycle", "primary_phase": "11", "depends_on": ["02", "10", "12", "13", "14", "17"]},
+    {"defect": "versioned HTTP API", "primary_phase": "12", "depends_on": ["10", "11", "13", "14", "15", "17"]},
+    {"defect": "revision event stream", "primary_phase": "13", "depends_on": ["11", "12", "14", "17"]},
+    {"defect": "real CLI wiring", "primary_phase": "14", "depends_on": ["11", "12", "13", "17"]},
+    {"defect": "final acceptance coverage", "primary_phase": "17", "depends_on": ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16"]}
+  ],
+  "known_limitations": [
+    "CI run status cannot be verified from this checkout.",
+    "Cross-platform CI status is unavailable from this checkout."
+  ],
+  "unresolved_blockers": [],
+  "next_phase": "01"
+}
