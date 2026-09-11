@@ -10,7 +10,7 @@ use codeflow_upsm::{EvidenceRef, NodeKind, UpsmGraph};
 use protobuf::Message;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tree_sitter::{Node, Parser};
+use tree_sitter::{InputEdit, Node, Parser, Point, Tree};
 
 pub const SYNTAX_SCHEMA_VERSION: u16 = 1;
 
@@ -55,11 +55,31 @@ pub enum ParseError {
     Initialization,
     #[error("tree-sitter cancelled parse")]
     Cancelled,
+    #[error("no compatible previous tree is available for this incremental edit")]
+    PreviousTreeUnavailable,
+    #[error("the incremental edit does not describe valid source byte ranges")]
+    InvalidEdit,
+}
+
+/// Byte offsets use the source before and after an edit respectively.  Points are
+/// derived internally so callers cannot accidentally pass character columns to
+/// Tree-sitter, which requires byte columns.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct TextEdit {
+    pub start_byte: usize,
+    pub old_end_byte: usize,
+    pub new_end_byte: usize,
+}
+
+struct ParseSession {
+    language: Language,
+    tree: Tree,
 }
 
 pub struct TreeSitterProvider {
     parser: Parser,
     cache: HashMap<codeflow_core::SourceBlobId, SyntaxEvidence>,
+    sessions: HashMap<codeflow_core::SourceBlobId, ParseSession>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -499,7 +519,86 @@ impl TreeSitterProvider {
         Self {
             parser: Parser::new(),
             cache: HashMap::new(),
+            sessions: HashMap::new(),
         }
+    }
+
+    /// Reparses `bytes` by editing the tree retained for `previous_source`.
+    /// The returned evidence is normalized exactly as a clean parse would be;
+    /// Tree-sitter node identities never leave this provider.
+    pub fn parse_incremental(
+        &mut self,
+        previous_source: &SourceIdentity,
+        source: SourceIdentity,
+        language: Language,
+        previous_bytes: &[u8],
+        bytes: &[u8],
+        edit: TextEdit,
+    ) -> Result<SyntaxEvidence, ParseError> {
+        if edit.start_byte > edit.old_end_byte
+            || edit.old_end_byte > previous_bytes.len()
+            || edit.start_byte > edit.new_end_byte
+            || edit.new_end_byte > bytes.len()
+        {
+            return Err(ParseError::InvalidEdit);
+        }
+        if let Some(cached) = self.cache.get(&source.blob_id) {
+            return Ok(cached.clone());
+        }
+        let mut edited_tree = self
+            .sessions
+            .get(&previous_source.blob_id)
+            .filter(|session| session.language == language)
+            .map(|session| session.tree.clone())
+            .ok_or(ParseError::PreviousTreeUnavailable)?;
+        self.configure(language)?;
+        edited_tree.edit(&InputEdit {
+            start_byte: edit.start_byte,
+            old_end_byte: edit.old_end_byte,
+            new_end_byte: edit.new_end_byte,
+            start_position: point_at(previous_bytes, edit.start_byte)
+                .ok_or(ParseError::InvalidEdit)?,
+            old_end_position: point_at(previous_bytes, edit.old_end_byte)
+                .ok_or(ParseError::InvalidEdit)?,
+            new_end_position: point_at(bytes, edit.new_end_byte).ok_or(ParseError::InvalidEdit)?,
+        });
+        let tree = self
+            .parser
+            .parse(bytes, Some(&edited_tree))
+            .ok_or(ParseError::Cancelled)?;
+        Ok(self.record_parse(source, language, tree))
+    }
+
+    fn configure(&mut self, language: Language) -> Result<(), ParseError> {
+        let grammar = grammar_for(language).ok_or(ParseError::Unsupported(language))?;
+        self.parser
+            .set_language(&grammar)
+            .map_err(|_| ParseError::Initialization)
+    }
+
+    fn record_parse(
+        &mut self,
+        source: SourceIdentity,
+        language: Language,
+        tree: Tree,
+    ) -> SyntaxEvidence {
+        let mut nodes = Vec::new();
+        let mut errors = Vec::new();
+        collect(tree.root_node(), &source, &mut nodes, &mut errors);
+        nodes.sort_by(|a, b| (a.span.start.byte, &a.kind).cmp(&(b.span.start.byte, &b.kind)));
+        errors.sort_by_key(|error| error.span.start.byte);
+        let evidence = SyntaxEvidence {
+            schema_version: SYNTAX_SCHEMA_VERSION,
+            provider: self.name().to_owned(),
+            source: source.clone(),
+            language,
+            nodes,
+            errors,
+        };
+        self.cache.insert(source.blob_id.clone(), evidence.clone());
+        self.sessions
+            .insert(source.blob_id, ParseSession { language, tree });
+        evidence
     }
 }
 impl Default for TreeSitterProvider {
@@ -524,33 +623,41 @@ impl ParserProvider for TreeSitterProvider {
         if let Some(cached) = self.cache.get(&source.blob_id) {
             return Ok(cached.clone());
         }
-        let grammar = match language {
-            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
-            _ => return Err(ParseError::Unsupported(language)),
-        };
-        self.parser
-            .set_language(&grammar)
-            .map_err(|_| ParseError::Initialization)?;
+        self.configure(language)?;
         let tree = self
             .parser
             .parse(bytes, None)
             .ok_or(ParseError::Cancelled)?;
-        let mut nodes = Vec::new();
-        let mut errors = Vec::new();
-        collect(tree.root_node(), &source, &mut nodes, &mut errors);
-        nodes.sort_by(|a, b| (a.span.start.byte, &a.kind).cmp(&(b.span.start.byte, &b.kind)));
-        errors.sort_by_key(|error| error.span.start.byte);
-        let evidence = SyntaxEvidence {
-            schema_version: SYNTAX_SCHEMA_VERSION,
-            provider: self.name().to_owned(),
-            source: source.clone(),
-            language,
-            nodes,
-            errors,
-        };
-        self.cache.insert(source.blob_id.clone(), evidence.clone());
-        Ok(evidence)
+        Ok(self.record_parse(source, language, tree))
     }
+}
+
+fn grammar_for(language: Language) -> Option<tree_sitter::Language> {
+    Some(match language {
+        Language::Rust => tree_sitter_rust::LANGUAGE.into(),
+        Language::Python => tree_sitter_python::LANGUAGE.into(),
+        Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+        Language::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
+        Language::Java => tree_sitter_java::LANGUAGE.into(),
+        Language::Kotlin => tree_sitter_kotlin_ng::LANGUAGE.into(),
+        Language::Go => tree_sitter_go::LANGUAGE.into(),
+        Language::C => tree_sitter_c::LANGUAGE.into(),
+        Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+        Language::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
+        Language::Unknown => return None,
+    })
+}
+
+fn point_at(bytes: &[u8], offset: usize) -> Option<Point> {
+    (offset <= bytes.len()).then(|| {
+        let prefix = &bytes[..offset];
+        let row = prefix.iter().filter(|byte| **byte == b'\n').count();
+        let column = prefix
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map_or(prefix.len(), |last_newline| prefix.len() - last_newline - 1);
+        Point { row, column }
+    })
 }
 
 fn collect(
@@ -629,13 +736,110 @@ mod tests {
         assert!(!evidence.errors.is_empty());
     }
     #[test]
-    fn unsupported_language_is_explicit() {
+    fn unknown_language_is_explicit() {
         let bytes = b"x";
         let mut provider = TreeSitterProvider::new();
         assert!(matches!(
-            provider.parse(source(bytes), Language::Python, bytes),
-            Err(ParseError::Unsupported(Language::Python))
+            provider.parse(source(bytes), Language::Unknown, bytes),
+            Err(ParseError::Unsupported(Language::Unknown))
         ));
+    }
+
+    #[test]
+    fn every_declared_language_has_a_production_grammar_and_recovers() {
+        let fixtures = [
+            (
+                Language::Rust,
+                b"fn main() {}".as_slice(),
+                b"fn {".as_slice(),
+            ),
+            (
+                Language::Python,
+                b"def main():\n    pass\n".as_slice(),
+                b"def (".as_slice(),
+            ),
+            (
+                Language::TypeScript,
+                b"const x: number = 1;".as_slice(),
+                b"const = ;".as_slice(),
+            ),
+            (
+                Language::JavaScript,
+                b"const x = 1;".as_slice(),
+                b"const = ;".as_slice(),
+            ),
+            (
+                Language::Java,
+                b"class Main {}".as_slice(),
+                b"class {".as_slice(),
+            ),
+            (
+                Language::Kotlin,
+                b"fun main() {}".as_slice(),
+                b"fun {".as_slice(),
+            ),
+            (
+                Language::Go,
+                b"package main\nfunc main() {}".as_slice(),
+                b"func {".as_slice(),
+            ),
+            (
+                Language::C,
+                b"int main(void) { return 0; }".as_slice(),
+                b"int {".as_slice(),
+            ),
+            (
+                Language::Cpp,
+                b"int main() { return 0; }".as_slice(),
+                b"int {".as_slice(),
+            ),
+            (
+                Language::CSharp,
+                b"class Main {}".as_slice(),
+                b"class {".as_slice(),
+            ),
+        ];
+        let mut provider = TreeSitterProvider::new();
+        for (language, valid, malformed) in fixtures {
+            let valid_evidence = provider
+                .parse(source(valid), language, valid)
+                .unwrap_or_else(|error| panic!("{language:?} valid fixture: {error}"));
+            assert!(!valid_evidence.nodes.is_empty(), "{language:?}");
+            let malformed_evidence = provider
+                .parse(source(malformed), language, malformed)
+                .unwrap_or_else(|error| panic!("{language:?} malformed fixture: {error}"));
+            assert!(!malformed_evidence.nodes.is_empty(), "{language:?}");
+            assert!(!malformed_evidence.errors.is_empty(), "{language:?}");
+        }
+    }
+
+    #[test]
+    fn incremental_parse_reuses_edited_tree_and_matches_clean_parse() {
+        let before = b"def hello():\n    return 1\n";
+        let after = b"def hello():\n    return 42\n";
+        let before_source = source(before);
+        let after_source = source(after);
+        let mut incremental = TreeSitterProvider::new();
+        incremental
+            .parse(before_source.clone(), Language::Python, before)
+            .unwrap();
+        let incremental_evidence = incremental
+            .parse_incremental(
+                &before_source,
+                after_source.clone(),
+                Language::Python,
+                before,
+                after,
+                TextEdit {
+                    start_byte: before.len() - 2,
+                    old_end_byte: before.len() - 1,
+                    new_end_byte: after.len() - 1,
+                },
+            )
+            .unwrap();
+        let mut clean = TreeSitterProvider::new();
+        let clean_evidence = clean.parse(after_source, Language::Python, after).unwrap();
+        assert_eq!(incremental_evidence, clean_evidence);
     }
 
     #[test]

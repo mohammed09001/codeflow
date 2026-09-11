@@ -1,0 +1,54 @@
+{
+  "phase": "00",
+  "goal": "Establish current repository truth and assign every known Execution 03 gap to one owning later phase.",
+  "baseline_proof": [
+    "Execution 02 ledger is at phase 01 with frontend_readiness NOT_READY.",
+    "The production parser registers tree-sitter-rust only and calls Parser::parse with no previous tree.",
+    "Framework detection uses source.contains markers.",
+    "Graph clustering and graph-learning functions are named surrogates, and NaiveBayes/tree_rank do not implement their declared algorithms.",
+    "The Cargo workspace has no codeflowd binary or HTTP/SSE implementation; the Python CLI is offline metadata dispatch.",
+    "scripts/final_acceptance.py validates Execution 01 evidence rather than Execution 03 behavior."
+  ],
+  "plan": [
+    "Phase 01: preserve portable core correctness and obtain same-SHA cross-platform CI evidence.",
+    "Phase 02: multi-language Tree-sitter registry, bounded incremental parsing, recovery, and equivalence tests.",
+    "Phase 03: parse-aware framework adapters with deceptive-input negative tests.",
+    "Phase 04: genuine Leiden, agglomerative, and HDBSCAN graph algorithms.",
+    "Phase 05: probabilistic Naive Bayes and a truthful tree learner.",
+    "Phases 06-07: trainable graph learning and an evidence-based retention decision.",
+    "Phases 08-09: workflow/runtime truth and versioned frontend view contracts.",
+    "Phases 10-13: codeflowd, HTTP v1, SSE, and real CLI wiring.",
+    "Phases 14-17: hardening, packaging, product CI, and final behavioral acceptance."
+  ],
+  "files_changed": [
+    "Execution/Execution 03.state.json",
+    "Execution/evidence-03/phase-00.json"
+  ],
+  "commands_run": [
+    {"command": "git status --short", "exit_code": 0},
+    {"command": "git rev-parse --abbrev-ref HEAD", "exit_code": 0, "output": "main"},
+    {"command": "git rev-parse HEAD", "exit_code": 0, "output": "6f10e2a5042d1274197a0d2ecc5f0cce50c9d8a6"},
+    {"command": "cargo fmt --check", "exit_code": 1, "outcome": "cargo is not on PATH in this PowerShell session"},
+    {"command": "C:\\Users\\mmaq0\\.cargo\\bin\\cargo.exe fmt --check", "exit_code": 0},
+    {"command": "C:\\Users\\mmaq0\\.cargo\\bin\\cargo.exe clippy --workspace --all-targets --all-features -- -D warnings", "exit_code": 0},
+    {"command": "C:\\Users\\mmaq0\\.cargo\\bin\\cargo.exe test --workspace --all-features", "exit_code": 0, "outcome": "38 unit tests and all doc tests passed"},
+    {"command": "python -m compileall -q python scripts", "exit_code": 0},
+    {"command": "python -m unittest discover -s scripts/tests -v", "exit_code": 0, "outcome": "5 tests passed"},
+    {"command": "python -m unittest discover -s python -p test_*.py -v", "exit_code": 0, "outcome": "19 tests passed"},
+    {"command": "python scripts/no_llm_guard.py", "exit_code": 0},
+    {"command": "python scripts/harness.py self-audit", "exit_code": 0, "outcome": "legacy diagnostic only; not used for phase control"}
+  ],
+  "tests": [
+    "Rust workspace format, lint, and test checks passed through the pinned cargo executable.",
+    "Python compilation and all 24 discovered Python/script tests passed.",
+    "No-LLM guard and legacy diagnostic self-audit passed."
+  ],
+  "benchmarks": [],
+  "failures_encountered": [
+    "The canonical cargo command fails because cargo is absent from PATH; the pinned cargo executable is available and was used for the direct checks."
+  ],
+  "repairs": [],
+  "result": "complete",
+  "remaining_gap": [],
+  "next_phase": "01"
+}
