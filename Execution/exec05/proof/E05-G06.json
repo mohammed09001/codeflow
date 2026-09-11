@@ -1,0 +1,1 @@
+{"goal":"E05-G06","status":"PASS","verifier":"scripts/exec05/verify_G06_frontend_contracts.py","assertions":["v1 view inventory","revision-safe envelope","deterministic cursor validation"]}

@@ -1,0 +1,14 @@
+{
+  "goal": "E05-G01",
+  "status": "PASS",
+  "proof_sha": "62cedf1f6c0e83c7441491a9ea28de7418b68424",
+  "working_tree_proof": true,
+  "verifier": "python scripts/exec05/verify_G01_graph_algorithms.py",
+  "commands": [
+    {"command":"python scripts/exec05/verify_G01_graph_algorithms.py","outcome":"pass"},
+    {"command":"cargo clippy -p codeflow-upsm --all-targets --all-features -- -D warnings","outcome":"pass"},
+    {"command":"git diff --check","outcome":"pass"}
+  ],
+  "assertions": ["Weak connectivity is truthfully named.", "Community, agglomerative, and density clustering use separate production paths.", "Weak bridges and density noise are behaviorally tested."],
+  "no_llm_compliance": "pass"
+}

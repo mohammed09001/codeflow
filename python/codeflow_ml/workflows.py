@@ -1,5 +1,14 @@
 """Bounded deterministic workflow reconstruction over canonical graph edges."""
 from dataclasses import dataclass
+from enum import StrEnum
+
+
+class WorkflowTruth(StrEnum):
+    DETERMINISTIC = "DETERMINISTIC"
+    POSSIBLE = "POSSIBLE"
+    RECONSTRUCTED = "RECONSTRUCTED"
+    OBSERVED = "OBSERVED"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
@@ -9,6 +18,7 @@ class WorkflowStep:
     side_effect: str | None = None
     hag_id: str | None = None
     confidence: float = 1.0
+    truth: WorkflowTruth = WorkflowTruth.POSSIBLE
 
 
 def entry_points(adjacency: dict[str, tuple[str, ...]], explicit: tuple[str, ...] = ()) -> tuple[str, ...]:
@@ -43,4 +53,4 @@ def rank_workflows(paths: tuple[tuple[str, ...], ...], exceptional_nodes: set[st
 
 
 def bind_side_effects(path: tuple[str, ...], effects: dict[str, str]) -> tuple[WorkflowStep, ...]:
-    return tuple(WorkflowStep(node, side_effect=effects.get(node)) for node in path)
+    return tuple(WorkflowStep(node, side_effect=effects.get(node), truth=WorkflowTruth.POSSIBLE) for node in path)

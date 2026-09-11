@@ -350,6 +350,8 @@ pub struct FrameworkSemantic {
     pub framework: String,
     pub kind: String,
     pub route: Option<String>,
+    pub method: Option<String>,
+    pub source_span: SourceSpan,
     pub confidence: f32,
     pub provider: String,
     pub fact_class: FactClass,
@@ -357,49 +359,192 @@ pub struct FrameworkSemantic {
 }
 pub trait FrameworkAdapter: Send + Sync {
     fn name(&self) -> &'static str;
-    fn detect(&self, language: Language, source: &str) -> Vec<FrameworkSemantic>;
+    fn detect(
+        &self,
+        source: SourceIdentity,
+        language: Language,
+        bytes: &[u8],
+    ) -> Vec<FrameworkSemantic>;
 }
+/// Extracts route facts only from grammar nodes which represent a framework
+/// annotation, decorator, or invocation.  Text is read from that already-parsed
+/// node to recover its arguments; comments and standalone strings have no such
+/// node and therefore cannot become deterministic facts.
 pub struct DeterministicWebAdapter;
 impl FrameworkAdapter for DeterministicWebAdapter {
     fn name(&self) -> &'static str {
-        "deterministic-web"
+        "tree-sitter-framework"
     }
-    fn detect(&self, language: Language, source: &str) -> Vec<FrameworkSemantic> {
-        let (framework, markers): (Option<&str>, &[&str]) = match language {
-            Language::Rust => (Some("rust-web"), &["#[get(", "#[post(", "Router::new"]),
-            Language::Python => (
-                Some("python-web"),
-                &["@app.route", "@router.get", "@app.get"],
-            ),
-            Language::TypeScript | Language::JavaScript => {
-                (Some("js-web"), &["app.get(", "router.get(", "app.post("])
-            }
-            Language::Java => (
-                Some("spring"),
-                &["@GetMapping", "@PostMapping", "@RequestMapping"],
-            ),
-            Language::Go => (Some("go-http"), &["http.HandleFunc", "router.GET("]),
-            Language::CSharp => (Some("aspnet"), &["MapGet(", "[HttpGet"]),
-            _ => (None, &[]),
+    fn detect(
+        &self,
+        source: SourceIdentity,
+        language: Language,
+        bytes: &[u8],
+    ) -> Vec<FrameworkSemantic> {
+        let Some(grammar) = grammar_for(language) else {
+            return Vec::new();
         };
-        framework
+        let mut parser = Parser::new();
+        if parser.set_language(&grammar).is_err() {
+            return Vec::new();
+        }
+        let Some(tree) = parser.parse(bytes, None) else {
+            return Vec::new();
+        };
+        let mut nodes = Vec::new();
+        collect_framework_nodes(tree.root_node(), &mut nodes);
+        let mut facts = nodes
             .into_iter()
-            .flat_map(|name| {
-                markers
-                    .iter()
-                    .filter(move |marker| source.contains(**marker))
-                    .map(move |marker| FrameworkSemantic {
-                        framework: name.into(),
-                        kind: "http_route".into(),
-                        route: Some((*marker).into()),
-                        confidence: 1.0,
-                        provider: "deterministic-web".into(),
-                        fact_class: FactClass::Deterministic,
-                        evidence_id: EvidenceId::derive("codeflow.framework.v1", &[name, *marker]),
-                    })
+            .filter_map(|node| {
+                framework_candidate(language, node, bytes).map(|candidate| (node, candidate))
             })
-            .collect()
+            .map(|(node, (framework, method, route))| {
+                let span = span_for(node, &source);
+                FrameworkSemantic {
+                    evidence_id: EvidenceId::derive(
+                        "codeflow.framework.ast.v2",
+                        &[
+                            &source.normalized_path,
+                            &span.start.byte.to_string(),
+                            &span.end.byte.to_string(),
+                            &framework,
+                        ],
+                    ),
+                    framework,
+                    kind: "http_route".into(),
+                    route,
+                    method,
+                    source_span: span,
+                    confidence: 1.0,
+                    provider: self.name().into(),
+                    fact_class: FactClass::Deterministic,
+                }
+            })
+            .collect::<Vec<_>>();
+        facts.sort_by(|left, right| {
+            (
+                left.source_span.start.byte,
+                &left.framework,
+                &left.method,
+                &left.route,
+            )
+                .cmp(&(
+                    right.source_span.start.byte,
+                    &right.framework,
+                    &right.method,
+                    &right.route,
+                ))
+        });
+        facts
     }
+}
+
+fn collect_framework_nodes<'a>(node: Node<'a>, output: &mut Vec<Node<'a>>) {
+    if matches!(
+        node.kind(),
+        "call"
+            | "call_expression"
+            | "invocation_expression"
+            | "macro_invocation"
+            | "decorator"
+            | "marker_annotation"
+            | "annotation"
+            | "attribute_item"
+            | "attribute"
+    ) {
+        output.push(node);
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        collect_framework_nodes(child, output);
+    }
+}
+
+fn framework_candidate(
+    language: Language,
+    node: Node<'_>,
+    bytes: &[u8],
+) -> Option<(String, Option<String>, Option<String>)> {
+    let text = node.utf8_text(bytes).ok()?.trim();
+    let normalized = text.replace(char::is_whitespace, "");
+    let quoted = first_quoted(text);
+    let method_from = |prefix: &str| method_after(&normalized, prefix);
+    match language {
+        Language::Rust if node.kind() == "attribute_item" => {
+            let method = method_after(&normalized, "#[")?;
+            matches!(method.as_str(), "get" | "post" | "put" | "delete" | "patch")
+                .then(|| ("actix-web".into(), Some(method), quoted))
+        }
+        Language::Python if node.kind() == "decorator" => {
+            let method = method_from("@app.").or_else(|| method_from("@router."))?;
+            matches!(
+                method.as_str(),
+                "get" | "post" | "put" | "delete" | "patch" | "route"
+            )
+            .then(|| {
+                let framework = if normalized.starts_with("@app.route") {
+                    "flask"
+                } else {
+                    "fastapi"
+                };
+                (framework.into(), Some(method), quoted)
+            })
+        }
+        Language::TypeScript | Language::JavaScript if node.kind() == "call_expression" => {
+            let method = method_from("app.").or_else(|| method_from("router."))?;
+            matches!(
+                method.as_str(),
+                "get" | "post" | "put" | "delete" | "patch" | "use"
+            )
+            .then(|| ("express".into(), Some(method), quoted))
+        }
+        Language::Java | Language::Kotlin
+            if matches!(node.kind(), "marker_annotation" | "annotation") =>
+        {
+            let method = [
+                "GetMapping",
+                "PostMapping",
+                "PutMapping",
+                "DeleteMapping",
+                "RequestMapping",
+            ]
+            .into_iter()
+            .find(|name| normalized.starts_with(&format!("@{name}")))?;
+            Some(("spring".into(), Some(method.to_ascii_lowercase()), quoted))
+        }
+        Language::Go if node.kind() == "call_expression" => {
+            if normalized.starts_with("http.HandleFunc(") {
+                Some(("net-http".into(), None, quoted))
+            } else {
+                let method = method_from("router.")?;
+                matches!(method.as_str(), "GET" | "POST" | "PUT" | "DELETE" | "PATCH")
+                    .then(|| ("go-router".into(), Some(method), quoted))
+            }
+        }
+        Language::CSharp
+            if node.kind() == "invocation_expression" || node.kind() == "call_expression" =>
+        {
+            let method = ["MapGet", "MapPost", "MapPut", "MapDelete"]
+                .into_iter()
+                .find(|name| normalized.contains(&format!(".{name}(")))?;
+            Some(("aspnet".into(), Some(method.to_ascii_lowercase()), quoted))
+        }
+        _ => None,
+    }
+}
+
+fn method_after(text: &str, prefix: &str) -> Option<String> {
+    let suffix = text.strip_prefix(prefix)?;
+    let method = suffix.split(['(', '[']).next()?;
+    (!method.is_empty() && method.bytes().all(|byte| byte.is_ascii_alphabetic()))
+        .then(|| method.to_owned())
+}
+
+fn first_quoted(text: &str) -> Option<String> {
+    let quote = text.find(['\'', '"'])?;
+    let delimiter = text.as_bytes()[quote] as char;
+    let end = text[quote + 1..].find(delimiter)? + quote + 1;
+    Some(text[quote + 1..end].to_owned())
 }
 
 /// Runs a bounded external CPG export without exposing source content in errors.
@@ -934,31 +1079,83 @@ mod tests {
         assert_eq!(records[0].edge_kind.as_deref(), Some("CALL"));
     }
     #[test]
-    fn framework_adapter_is_deterministic_and_unknown_safe() {
+    fn framework_adapter_requires_parsed_route_constructs() {
         let adapter = DeterministicWebAdapter;
-        let rust = adapter.detect(Language::Rust, "#[get(\"/health\")] fn health() {} ");
+        let rust_bytes = b"#[get(\"/health\")] fn health() {}";
+        let rust = adapter.detect(source(rust_bytes), Language::Rust, rust_bytes);
         assert_eq!(rust.len(), 1);
         assert_eq!(rust[0].fact_class, FactClass::Deterministic);
-        assert_eq!(rust[0].provider, "deterministic-web");
+        assert_eq!(rust[0].provider, "tree-sitter-framework");
+        assert_eq!(rust[0].method.as_deref(), Some("get"));
+        assert_eq!(rust[0].route.as_deref(), Some("/health"));
+        assert!(rust[0].source_span.validate().is_ok());
         assert!(!rust[0].evidence_id.as_str().is_empty());
-        assert_eq!(
-            adapter.detect(Language::Python, "@app.route('/x')").len(),
-            1
-        );
-        assert_eq!(adapter.detect(Language::Java, "@GetMapping('/x')").len(), 1);
+        let python = b"@app.route('/x')\ndef x(): pass";
         assert_eq!(
             adapter
-                .detect(Language::Go, "http.HandleFunc('/x', h)")
+                .detect(source(python), Language::Python, python)
+                .len(),
+            1
+        );
+        let java = b"class A { @GetMapping(\"/x\") void x() {} }";
+        assert_eq!(adapter.detect(source(java), Language::Java, java).len(), 1);
+        let javascript = b"app.get('/x', handler);";
+        assert_eq!(
+            adapter
+                .detect(source(javascript), Language::JavaScript, javascript)
                 .len(),
             1
         );
         assert_eq!(
             adapter
-                .detect(Language::CSharp, "app.MapGet('/x', h)")
+                .detect(
+                    source(b"package main\nfunc x(){ http.HandleFunc(\"/x\", h) }"),
+                    Language::Go,
+                    b"package main\nfunc x(){ http.HandleFunc(\"/x\", h) }"
+                )
                 .len(),
             1
         );
-        assert!(adapter.detect(Language::Unknown, "anything").is_empty());
+        assert_eq!(
+            adapter
+                .detect(
+                    source(b"app.MapGet(\"/x\", h);"),
+                    Language::CSharp,
+                    b"app.MapGet(\"/x\", h);"
+                )
+                .len(),
+            1
+        );
+        for (language, deceptive) in [
+            (Language::JavaScript, b"// app.get('/fake')".as_slice()),
+            (
+                Language::Java,
+                b"class A { String x = \"@GetMapping('/fake')\"; }".as_slice(),
+            ),
+            (
+                Language::Python,
+                b"# @app.get('/fake')\ndef x(): pass".as_slice(),
+            ),
+            (
+                Language::JavaScript,
+                b"const app_get_example = 1;".as_slice(),
+            ),
+            (
+                Language::JavaScript,
+                b"service.get('/not-a-route');".as_slice(),
+            ),
+        ] {
+            assert!(
+                adapter
+                    .detect(source(deceptive), language, deceptive)
+                    .is_empty()
+            );
+        }
+        assert!(
+            adapter
+                .detect(source(b"anything"), Language::Unknown, b"anything")
+                .is_empty()
+        );
     }
     #[test]
     fn identifier_signals_are_style_and_noise_robust() {

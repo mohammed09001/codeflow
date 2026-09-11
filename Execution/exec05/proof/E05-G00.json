@@ -1,0 +1,23 @@
+{
+  "goal": "E05-G00",
+  "status": "PASS",
+  "verified_at": "2026-09-11",
+  "proof_sha": "62cedf1f6c0e83c7441491a9ea28de7418b68424",
+  "working_tree_proof": true,
+  "verifier": "python scripts/exec05/verify_G00_frameworks.py",
+  "commands": [
+    {"command":"python scripts/exec05/verify_G00_frameworks.py","outcome":"pass"},
+    {"command":"cargo fmt --check","outcome":"pass"},
+    {"command":"cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings","outcome":"pass"},
+    {"command":"python scripts/no_llm_guard.py","outcome":"pass"},
+    {"command":"python scripts/harness.py self-audit","outcome":"pass"},
+    {"command":"git diff --check","outcome":"pass"}
+  ],
+  "assertions": [
+    "Route extraction is AST-gated by Tree-sitter node kinds.",
+    "Positive Rust, Python, Java, JavaScript, Go, and C# routes are detected.",
+    "Comments, string literals, commented decorators, identifiers, and unrelated calls produce no deterministic route fact.",
+    "Each extracted fact includes route, method, source span, provenance, confidence, fact class, and evidence ID."
+  ],
+  "no_llm_compliance": "pass"
+}

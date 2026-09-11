@@ -1,0 +1,1 @@
+{"goal":"E05-G04","status":"PASS","verifier":"scripts/exec05/verify_G04_model_retention.py","assertions":["protocol precedes decision","held-out gain and latency budget required","non-winning DL remains optional"]}

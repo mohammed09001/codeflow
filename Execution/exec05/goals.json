@@ -1,0 +1,21 @@
+{
+  "execution": "05",
+  "schema_version": 1,
+  "goals": [
+    {"id":"E05-G00","title":"Parse-aware framework semantics","status":"PASS","depends_on":[],"verifier":"scripts/exec05/verify_G00_frameworks.py","proof_file":"Execution/exec05/proof/E05-G00.json"},
+    {"id":"E05-G01","title":"Real graph algorithms","status":"PASS","depends_on":[],"verifier":"scripts/exec05/verify_G01_graph_algorithms.py","proof_file":"Execution/exec05/proof/E05-G01.json"},
+    {"id":"E05-G02","title":"Truthful classical ML","status":"PASS","depends_on":[],"verifier":"scripts/exec05/verify_G02_classical_ml.py","proof_file":"Execution/exec05/proof/E05-G02.json"},
+    {"id":"E05-G03","title":"Trainable graph learning","status":"PASS","depends_on":[],"verifier":"scripts/exec05/verify_G03_graph_learning.py","proof_file":"Execution/exec05/proof/E05-G03.json"},
+    {"id":"E05-G04","title":"Model retention gate","status":"PASS","depends_on":["E05-G02","E05-G03"],"verifier":"scripts/exec05/verify_G04_model_retention.py","proof_file":"Execution/exec05/proof/E05-G04.json"},
+    {"id":"E05-G05","title":"Workflow/runtime truth closure","status":"PASS","depends_on":["E05-G00","E05-G01"],"verifier":"scripts/exec05/verify_G05_workflow_runtime.py","proof_file":"Execution/exec05/proof/E05-G05.json"},
+    {"id":"E05-G06","title":"Frontend contract v1 freeze","status":"PASS","depends_on":["E05-G05"],"verifier":"scripts/exec05/verify_G06_frontend_contracts.py","proof_file":"Execution/exec05/proof/E05-G06.json"},
+    {"id":"E05-G07","title":"Production codeflowd","status":"ACTIVE","depends_on":["E05-G06"],"verifier":"scripts/exec05/verify_G07_codeflowd.py"},
+    {"id":"E05-G08","title":"HTTP API v1","status":"OPEN","depends_on":["E05-G07"],"verifier":"scripts/exec05/verify_G08_http.py"},
+    {"id":"E05-G09","title":"SSE revision stream","status":"OPEN","depends_on":["E05-G08"],"verifier":"scripts/exec05/verify_G09_sse.py"},
+    {"id":"E05-G10","title":"Real CLI integration","status":"OPEN","depends_on":["E05-G09"],"verifier":"scripts/exec05/verify_G10_cli.py"},
+    {"id":"E05-G11","title":"Security/privacy/resource closure","status":"OPEN","depends_on":["E05-G07","E05-G08","E05-G09","E05-G10"],"verifier":"scripts/exec05/verify_G11_security_resources.py"},
+    {"id":"E05-G12","title":"Packaging and clean-machine proof","status":"OPEN","depends_on":["E05-G11"],"verifier":"scripts/exec05/verify_G12_packaging.py"},
+    {"id":"E05-G13","title":"Product-level CI","status":"OPEN","depends_on":["E05-G12"],"verifier":"scripts/exec05/verify_G13_product_ci.py"},
+    {"id":"E05-G14","title":"Final same-SHA backend acceptance","status":"OPEN","depends_on":["E05-G04","E05-G13"],"verifier":"scripts/exec05/verify_G14_final_system.py"}
+  ]
+}

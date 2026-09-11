@@ -4,6 +4,28 @@ import json
 API_VERSION = "v1"
 
 
+REQUIRED_VIEW_TYPES = ("ProjectView", "RevisionView", "CapabilityView", "GraphNodeView", "GraphEdgeView", "FeatureView", "SubsystemView", "WorkflowView", "EvidenceView", "SemanticZoomView", "QueryResult", "Cursor", "ErrorEnvelope", "PartialStatus", "UnknownStatus")
+
+
+def revision_envelope(project_id: str, revision_id: str, payload: dict, partial: bool = False) -> dict:
+    if not project_id or not revision_id:
+        raise ValueError("revision-safe response requires project and revision IDs")
+    return {"api_version": API_VERSION, "project_id": project_id, "revision_id": revision_id, "partial": partial, "result": payload}
+
+
+def revision_cursor(project_id: str, revision_id: str, offset: int) -> str:
+    if offset < 0:
+        raise ValueError("invalid cursor offset")
+    return json.dumps({"project_id": project_id, "revision_id": revision_id, "offset": offset}, sort_keys=True, separators=(",", ":"))
+
+
+def validate_cursor(cursor: str, project_id: str, revision_id: str) -> int:
+    value = json.loads(cursor)
+    if value.get("project_id") != project_id or value.get("revision_id") != revision_id:
+        raise ValueError("cursor revision mismatch")
+    return int(value["offset"])
+
+
 def paginate(items: list[dict], limit: int = 100, cursor: int = 0) -> dict:
     if limit < 0 or cursor < 0:
         raise ValueError("invalid pagination budget")

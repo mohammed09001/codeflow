@@ -1,0 +1,10 @@
+{
+  "execution": "05",
+  "current_goal": "E05-G07",
+  "frontend_readiness": "NOT_READY",
+  "accepted_sha": null,
+  "last_verified_sha": null,
+  "open_goals": 8,
+  "blocked_goals": [],
+  "notes": ["E05-G00 through E05-G02 passed on the current working tree; G03 is active."]
+}

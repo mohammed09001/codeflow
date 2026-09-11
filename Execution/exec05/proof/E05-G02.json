@@ -1,0 +1,1 @@
+{"goal":"E05-G02","status":"PASS","proof_sha":"62cedf1f6c0e83c7441491a9ea28de7418b68424","working_tree_proof":true,"verifier":"python scripts/exec05/verify_G02_classical_ml.py","assertions":["Gaussian probabilistic NB","regularized logistic fitting","decision-tree split learner","project-safe split and metrics"],"no_llm_compliance":"pass"}

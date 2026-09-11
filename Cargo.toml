@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/codeflow-analysis", "crates/codeflow-core", "crates/codeflow-hag", "crates/codeflow-project", "crates/codeflow-store", "crates/codeflow-upsm"]
+members = ["crates/codeflow-analysis", "crates/codeflow-core", "crates/codeflow-hag", "crates/codeflow-project", "crates/codeflow-store", "crates/codeflow-upsm", "crates/codeflowd"]
 
 [workspace.package]
 version = "0.1.0"

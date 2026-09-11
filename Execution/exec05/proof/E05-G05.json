@@ -1,0 +1,1 @@
+{"goal":"E05-G05","status":"PASS","verifier":"scripts/exec05/verify_G05_workflow_runtime.py","assertions":["bounded paths and cycles","static facts are POSSIBLE","runtime facts are OBSERVED only"]}

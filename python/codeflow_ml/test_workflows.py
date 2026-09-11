@@ -1,6 +1,6 @@
 import unittest
 
-from .workflows import bind_side_effects, entry_points, rank_workflows, reconstruct_workflows
+from .workflows import WorkflowTruth, bind_side_effects, entry_points, rank_workflows, reconstruct_workflows
 
 
 class WorkflowTests(unittest.TestCase):
@@ -12,9 +12,9 @@ class WorkflowTests(unittest.TestCase):
         ranked = rank_workflows(paths, {"error"})
         self.assertIn("error", ranked[0])
         self.assertEqual(bind_side_effects(ranked[0], {"store": "write"})[0].entity_id, "route")
+        self.assertEqual(bind_side_effects(ranked[0], {})[0].truth, WorkflowTruth.POSSIBLE)
 
     def test_cycles_are_bounded(self):
         paths = reconstruct_workflows({"a": ("b",), "b": ("a",)}, max_depth=3)
         self.assertTrue(paths)
         self.assertLessEqual(max(map(len, paths)), 4)
-

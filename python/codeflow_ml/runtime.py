@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import hashlib
 import json
+from .workflows import WorkflowTruth
 
 
 @dataclass(frozen=True)
@@ -13,10 +14,13 @@ class TraceEvent:
     state: str | None = None
     observed: bool = True
     evidence_id: str = ""
+    truth: WorkflowTruth = WorkflowTruth.OBSERVED
 
     def validate(self) -> None:
         if self.timestamp_ns < 0 or not self.kind:
             raise ValueError("invalid trace event")
+        if self.truth is not WorkflowTruth.OBSERVED or not self.observed:
+            raise ValueError("runtime traces may record OBSERVED facts only")
 
 
 def ingest_trace(payload: str | bytes, sample_rate: float = 1.0) -> tuple[TraceEvent, ...]:
@@ -40,7 +44,7 @@ def correlate_events(events: tuple[TraceEvent, ...], known_entities: set[str]) -
 
 
 def redact_trace(events: tuple[TraceEvent, ...], secret_fields: set[str]) -> tuple[TraceEvent, ...]:
-    return tuple(TraceEvent(event.timestamp_ns, event.kind, event.entity_id, event.target_id, None if "state" in secret_fields else event.state, event.observed, event.evidence_id) for event in events)
+    return tuple(TraceEvent(event.timestamp_ns, event.kind, event.entity_id, event.target_id, None if "state" in secret_fields else event.state, event.observed, event.evidence_id, event.truth) for event in events)
 
 
 def normalize_sessions(events: tuple[TraceEvent, ...]) -> dict[str, tuple[TraceEvent, ...]]:

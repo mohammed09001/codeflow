@@ -1,6 +1,6 @@
 import unittest
 
-from .baselines import FeatureCandidate, FeatureMatrix, LogisticBaseline, NaiveBayes, SignalVector, adaptive_weights, calibration_curve, classify_shared_name, clustering_ensemble, domain_specificity, evidence_summary, feature_participation, fuse_signals, infrastructure_centrality, merge_feature_candidates, seed_feature, signal_quality, tree_rank
+from .baselines import DecisionTree, FeatureCandidate, FeatureMatrix, LogisticBaseline, NaiveBayes, SignalVector, adaptive_weights, brier_score, calibration_curve, classification_metrics, classify_shared_name, clustering_ensemble, domain_specificity, evidence_summary, feature_participation, fuse_signals, inference_latency_ns, infrastructure_centrality, linear_rank, merge_feature_candidates, pr_auc, project_split, seed_feature, signal_quality
 
 
 class BaselineTests(unittest.TestCase):
@@ -9,7 +9,7 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(NaiveBayes().fit(matrix, ["x", "y"]).predict([1, 0]), "x")
         model = LogisticBaseline().fit(matrix, [1, 0], epochs=20)
         self.assertGreater(model.predict_proba([1, 0]), model.predict_proba([0, 1]))
-        self.assertEqual(tree_rank([[1, 0], [0, 1]], [1, 0]), [0, 1])
+        self.assertEqual(linear_rank([[1, 0], [0, 1]], [1, 0]), [0, 1])
         self.assertEqual(clustering_ensemble([[0, 1], [0, 1]]), (0.0, 1.0))
         self.assertAlmostEqual(signal_quality([0.5, 1.0]), 0.75)
         self.assertEqual(adaptive_weights([1, 3]), (0.25, 0.75))
@@ -40,3 +40,28 @@ class BaselineTests(unittest.TestCase):
         self.assertTrue(contradictory)
         self.assertEqual(len(calibration_curve([0.1, 0.9], [False, True])), 2)
         self.assertIn("signals", evidence_summary(SignalVector()))
+
+    def test_probabilistic_nb_and_tree_are_not_old_surrogates(self):
+        matrix = FeatureMatrix.from_rows([("a", [-2]), ("b", [-1]), ("c", [1]), ("d", [2])])
+        labels = ["left", "left", "right", "right"]
+        nb = NaiveBayes().fit(matrix, labels)
+        probabilities = nb.predict_proba([1.5])
+        self.assertAlmostEqual(sum(probabilities.values()), 1.0)
+        self.assertEqual(nb.predict([1.5]), "right")
+        tree = DecisionTree().fit(matrix, labels)
+        self.assertEqual(tree.predict([-1.5]), "left")
+        self.assertEqual(tree.predict([1.5]), "right")
+
+    def test_project_split_and_metrics_do_not_leak_entities(self):
+        train, validation, test = project_split([("a", "a1"), ("b", "b1"), ("c", "c1")], ["b"], ["c"])
+        self.assertEqual((train, validation, test), (("a1",), ("b1",), ("c1",)))
+        metrics = classification_metrics(["left", "right"], ["left", "left"])
+        self.assertEqual(metrics["accuracy"], 0.5)
+        self.assertIn("right", metrics["per_class"])
+        with self.assertRaises(ValueError):
+            project_split([], ["a"], ["a"])
+
+    def test_probability_metrics_and_inference_latency_are_reportable(self):
+        self.assertEqual(brier_score([0.0, 1.0], [False, True]), 0.0)
+        self.assertGreater(pr_auc([0.9, 0.1], [True, False]), 0.9)
+        self.assertGreaterEqual(inference_latency_ns(lambda row: row[0], [[1.0]]), 0)
