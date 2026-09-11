@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": "05",
+  "completed_at": "2026-09-10T18:00:00+04:00",
+  "files_changed": ["Cargo.toml", "Cargo.lock", "crates/codeflow-analysis/Cargo.toml", "crates/codeflow-analysis/src/lib.rs"],
+  "commands_run": ["cargo test -p codeflow-analysis --all-features", "cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings"],
+  "tests": ["SCIP protobuf import, path safety, stale/partial classification, unavailable indexer fallback, canonical UPSM merge: 9 passed"],
+  "test_outcomes": [{"name": "SCIP protobuf importer", "status": "passed"}, {"name": "provider symbol isolation", "status": "passed"}, {"name": "stale/partial index handling", "status": "passed"}],
+  "benchmark_outcomes": [],
+  "known_limitations": ["Live SCIP indexers are optional capabilities and were not installed in this workspace."],
+  "no_llm_compliance": true,
+  "schema_changes": ["Added SCIP evidence-to-UPSM conversion."],
+  "next_phase_dependencies": ["optional Joern CPG evidence provider"]
+}

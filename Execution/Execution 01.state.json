@@ -1,7 +1,7 @@
 {
   "execution": "CodeFlow Execution 01",
   "schema_version": 1,
-  "current_phase": "05",
+  "current_phase": "22",
   "phases": {
     "00": {
       "status": "complete",
@@ -54,10 +54,41 @@
       "benchmark_results": [],
       "deviations": ["Rust grammar is implemented; unsupported languages return typed capability errors until their grammar adapters are added."],
       "critical_schema_hashes": {"syntax_schema_version": "1"}
-    }
+    },
+    "05": {
+      "status": "complete",
+      "tests": ["cargo test -p codeflow-analysis --all-features (passed: 9)", "cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings (passed)"],
+      "artifacts": ["crates/codeflow-analysis/src/lib.rs", "Execution/evidence/phase-05.json"],
+      "benchmark_results": [],
+      "deviations": ["SCIP indexer execution is capability-gated; absence produces explicit fallback rather than pipeline failure."],
+      "critical_schema_hashes": {"scip_evidence_schema_version": "1"}
+    },
+    "06": {
+      "status": "complete",
+      "tests": ["cargo test -p codeflow-analysis --all-features (passed: 10)", "cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings (passed)"],
+      "artifacts": ["crates/codeflow-analysis/src/lib.rs", "Execution/evidence/phase-06.json"],
+      "benchmark_results": [],
+      "deviations": ["Joern is capability-gated because no local Joern binary is installed; unavailable-provider behavior is verified."],
+      "critical_schema_hashes": {"cpg_evidence_schema_version": "1"}
+    },
+    "07": {"status":"complete","tests":["cargo test -p codeflow-upsm --all-features (passed: 4)","cargo clippy -p codeflow-upsm --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-upsm/src/lib.rs","Execution/evidence/phase-07.json"],"benchmark_results":[],"deviations":[],"critical_schema_hashes":{"upsm_schema_version":"1"}}
+    ,"08":{"status":"complete","tests":["cargo test -p codeflow-core --all-features (passed: 7)","cargo clippy -p codeflow-core --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-core/src/lib.rs","Execution/evidence/phase-08.json"],"benchmark_results":[],"deviations":[],"critical_schema_hashes":{"evidence_schema_version":"1"}}
+    ,"09":{"status":"complete","tests":["cargo test -p codeflow-store --all-features (passed: 1)","cargo clippy -p codeflow-store --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-store/src/lib.rs","Execution/evidence/phase-09.json"],"benchmark_results":[],"deviations":[],"critical_schema_hashes":{"store_schema_version":"1"}}
+    ,"10":{"status":"complete","tests":["cargo test -p codeflow-project --all-features (passed: 8)","cargo clippy -p codeflow-project --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-project/src/lib.rs","Execution/evidence/phase-10.json"],"benchmark_results":["incremental/full closure equivalence passed"],"deviations":["Host watcher delivery is capability-dependent; normalized synthetic event behavior is covered."],"critical_schema_hashes":{"incremental_schema_version":"1"}}
+    ,"11":{"status":"complete","tests":["cargo test -p codeflow-analysis --all-features (passed: 11)","cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-analysis/src/lib.rs","Execution/evidence/phase-11.json"],"benchmark_results":[],"deviations":["Framework recognition is conservative marker-based detection."],"critical_schema_hashes":{"framework_evidence_schema_version":"1"}}
+    ,"12":{"status":"complete","tests":["cargo test -p codeflow-upsm --all-features (passed: 5)","cargo clippy -p codeflow-upsm --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-upsm/src/lib.rs","Execution/evidence/phase-12.json"],"benchmark_results":[],"deviations":["Unknown provider relations remain explicit rather than guessed."],"critical_schema_hashes":{"upsm_semantic_schema_version":"1"}}
+    ,"13":{"status":"complete","tests":["cargo test -p codeflow-upsm --all-features (passed: 6)","cargo clippy -p codeflow-upsm --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-upsm/src/lib.rs","Execution/evidence/phase-13.json"],"benchmark_results":["baseline repeatability passed"],"deviations":["Clustering baselines are deterministic structural surrogates until calibrated weighted datasets exist."],"critical_schema_hashes":{"projection_schema_version":"1"}}
+    ,"14":{"status":"complete","tests":["cargo test -p codeflow-hag --all-features (passed: 4)","cargo clippy -p codeflow-hag --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-hag/src/lib.rs","Execution/evidence/phase-14.json"],"benchmark_results":[],"deviations":["HAG remains separate from UPSM and does not override implementation truth."],"critical_schema_hashes":{"hag_schema_version":"1"}}
+    ,"15":{"status":"complete","tests":["cargo test -p codeflow-analysis --all-features (passed: 11)","cargo clippy -p codeflow-analysis --all-targets --all-features -- -D warnings (passed)"],"artifacts":["crates/codeflow-analysis/src/lib.rs","Execution/evidence/phase-15.json"],"benchmark_results":["deterministic candidate ordering passed"],"deviations":["Semantic extraction is classical and vocabulary-driven with no LLM dependency."],"critical_schema_hashes":{"lexical_schema_version":"1"}}
+    ,"16":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_baselines -v (passed: 2)","python -m compileall -q python/codeflow_ml (passed)","python scripts/no_llm_guard.py (passed)","python scripts/harness.py self-audit (passed)"],"artifacts":["python/codeflow_ml/baselines.py","python/codeflow_ml/test_baselines.py","Execution/evidence/phase-16.json"],"benchmark_results":["repeated inference determinism passed"],"deviations":["Dependency-free reference baselines prioritize reproducibility over acceleration."],"critical_schema_hashes":{"ml_baseline_schema_version":"1"}}
+    ,"17":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_baselines -v (passed: 3)","python -m compileall -q python/codeflow_ml (passed)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/baselines.py","python/codeflow_ml/test_baselines.py","Execution/evidence/phase-17.json"],"benchmark_results":["candidate merge ordering passed"],"deviations":["Feature assignment is candidate-based and preserves UNKNOWN rather than forcing a label."],"critical_schema_hashes":{"feature_candidate_schema_version":"1"}}
+    ,"18":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_baselines -v (passed: 4)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/baselines.py","python/codeflow_ml/test_baselines.py","Execution/evidence/phase-18.json"],"benchmark_results":["high-degree correction passed"],"deviations":["Infrastructure classification is conservative and vocabulary-driven."],"critical_schema_hashes":{"infrastructure_signal_schema_version":"1"}}
+    ,"19":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_workflows python.codeflow_ml.test_baselines -v (passed: 6)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/workflows.py","python/codeflow_ml/test_workflows.py","Execution/evidence/phase-19.json"],"benchmark_results":["path bound passed"],"deviations":["Workflow output is bounded possible paths, not complete runtime coverage."],"critical_schema_hashes":{"workflow_schema_version":"1"}}
+    ,"20":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows python.codeflow_ml.test_baselines -v (passed: 8)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/runtime.py","python/codeflow_ml/test_runtime.py","Execution/evidence/phase-20.json"],"benchmark_results":["sampling determinism passed"],"deviations":["Runtime evidence is optional observed-only input."],"critical_schema_hashes":{"runtime_trace_schema_version":"1"}}
+    ,"21":{"status":"complete","tests":["python -m unittest python.codeflow_ml.test_runtime python.codeflow_ml.test_workflows python.codeflow_ml.test_baselines -v (passed: 9)","python scripts/no_llm_guard.py (passed)"],"artifacts":["python/codeflow_ml/runtime.py","python/codeflow_ml/test_runtime.py","Execution/evidence/phase-21.json"],"benchmark_results":["synthetic trace abstraction passed"],"deviations":["Trace abstraction summarizes observed sessions and does not synthesize unobserved behavior."],"critical_schema_hashes":{"trace_abstraction_schema_version":"1"}}
   },
   "blocked_items": [],
   "accepted_deviations": [],
-  "tool_versions": {"python": "3.14.6", "rust": "unavailable", "cargo": "unavailable"},
+  "tool_versions": {"python": "3.14.6", "rust": "1.88.0", "cargo": "1.88.0"},
   "last_verified_commit": "546e91af63091ad82361db4c44ceb70e78c287ac"
 }

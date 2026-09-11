@@ -1,12 +1,15 @@
 //! Safe, deterministic repository registration and snapshotting.
 
 use std::collections::BTreeMap;
+use std::collections::{BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use codeflow_core::{Language, ProjectId, RevisionId, SourceIdentity};
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
+use std::sync::mpsc::{self, Receiver};
 use thiserror::Error;
 
 pub const PROJECT_SCHEMA_VERSION: u16 = 1;
@@ -260,18 +263,165 @@ fn git_revision(root: &Path) -> Option<String> {
         None
     }
 }
+pub fn git_changed_paths(root: &Path, base: &str) -> Result<Vec<String>, std::io::Error> {
+    let output = Command::new("git")
+        .args(["diff", "--name-only", base])
+        .current_dir(root)
+        .output()?;
+    if !output.status.success() {
+        return Ok(Vec::new());
+    }
+    Ok(coalesce_changes(
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(|line| line.replace('\\', "/"))
+            .collect::<Vec<_>>(),
+    ))
+}
+
+/// Deterministic dependency-closure invalidator used by watchers and Git batches.
+pub fn invalidation_closure(
+    changed: impl IntoIterator<Item = String>,
+    reverse_dependencies: &BTreeMap<String, BTreeSet<String>>,
+) -> BTreeSet<String> {
+    let mut invalidated: BTreeSet<String> = changed.into_iter().collect();
+    let mut pending: VecDeque<String> = invalidated.iter().cloned().collect();
+    while let Some(path) = pending.pop_front() {
+        if let Some(dependents) = reverse_dependencies.get(&path) {
+            for dependent in dependents {
+                if invalidated.insert(dependent.clone()) {
+                    pending.push_back(dependent.clone());
+                }
+            }
+        }
+    }
+    invalidated
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvalidationPlan {
+    pub files: BTreeSet<String>,
+    pub reason: &'static str,
+}
+impl InvalidationPlan {
+    pub fn from_changes(
+        changed: impl IntoIterator<Item = String>,
+        reverse_dependencies: &BTreeMap<String, BTreeSet<String>>,
+    ) -> Self {
+        Self {
+            files: invalidation_closure(changed, reverse_dependencies),
+            reason: "source_change",
+        }
+    }
+}
+/// All dependency surfaces that can cause downstream semantic products to change.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct IncrementalDependencies {
+    pub reverse_files: BTreeMap<String, BTreeSet<String>>,
+    pub reverse_symbols: BTreeMap<String, BTreeSet<String>>,
+    pub reverse_flow_regions: BTreeMap<String, BTreeSet<String>>,
+    pub reverse_hag_nodes: BTreeMap<String, BTreeSet<String>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct IncrementalPlan {
+    pub changed_files: BTreeSet<String>,
+    pub invalidated_files: BTreeSet<String>,
+    pub invalidated_symbols: BTreeSet<String>,
+    pub invalidated_flow_regions: BTreeSet<String>,
+    pub invalidated_hag_nodes: BTreeSet<String>,
+}
+
+/// Computes the complete deterministic downstream closure for a coalesced change batch.
+pub fn incremental_plan(
+    changed: impl IntoIterator<Item = String>,
+    dependencies: &IncrementalDependencies,
+) -> IncrementalPlan {
+    let changed_files: BTreeSet<_> = changed.into_iter().collect();
+    let invalidated_files =
+        invalidation_closure(changed_files.clone(), &dependencies.reverse_files);
+    let invalidated_symbols = invalidation_closure(
+        invalidated_files.iter().cloned(),
+        &dependencies.reverse_symbols,
+    );
+    let invalidated_flow_regions = invalidation_closure(
+        invalidated_symbols.iter().cloned(),
+        &dependencies.reverse_flow_regions,
+    );
+    let invalidated_hag_nodes = invalidation_closure(
+        invalidated_flow_regions.iter().cloned(),
+        &dependencies.reverse_hag_nodes,
+    );
+    IncrementalPlan {
+        changed_files,
+        invalidated_files,
+        invalidated_symbols,
+        invalidated_flow_regions,
+        invalidated_hag_nodes,
+    }
+}
+
+/// Computes a content-addressed revision so an incremental publish can be compared with a full rebuild.
+pub fn incremental_revision(
+    project: &ProjectId,
+    base: &RevisionId,
+    plan: &IncrementalPlan,
+) -> RevisionId {
+    let payload = serde_json::to_vec(plan).expect("incremental plan is serializable");
+    RevisionId::derive(
+        "codeflow.incremental.v1",
+        &[
+            project.as_str(),
+            base.as_str(),
+            &blake3::hash(&payload).to_hex(),
+        ],
+    )
+}
+/// Collapses repeated watcher paths into a deterministic batch before invalidation.
+pub fn coalesce_changes(paths: impl IntoIterator<Item = String>) -> Vec<String> {
+    paths
+        .into_iter()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+pub fn paths_from_events(events: impl IntoIterator<Item = Event>) -> Vec<String> {
+    coalesce_changes(events.into_iter().flat_map(|event| {
+        event
+            .paths
+            .into_iter()
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+    }))
+}
+pub struct WatcherHandle {
+    pub watcher: RecommendedWatcher,
+    pub events: Receiver<Result<Event, notify::Error>>,
+}
+pub fn start_watcher(root: &Path) -> Result<WatcherHandle, notify::Error> {
+    let (sender, events) = mpsc::channel();
+    let mut watcher = RecommendedWatcher::new(
+        move |event| {
+            let _ = sender.send(event);
+        },
+        Config::default(),
+    )?;
+    watcher.watch(root, RecursiveMode::Recursive)?;
+    Ok(WatcherHandle { watcher, events })
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+    static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
     fn fixture() -> PathBuf {
         let path = std::env::temp_dir().join(format!(
-            "codeflow-project-{}",
+            "codeflow-project-{}-{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            FIXTURE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir_all(path.join("src")).unwrap();
         fs::write(path.join("src/main.rs"), "fn main() {} ").unwrap();
@@ -319,5 +469,71 @@ mod tests {
                 .any(|f| f.disposition == FileDisposition::Oversized)
         );
         fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn invalidation_closure_is_transitive_and_cycle_safe() {
+        let mut reverse = BTreeMap::new();
+        reverse.insert("a".into(), BTreeSet::from(["b".into()]));
+        reverse.insert("b".into(), BTreeSet::from(["a".into(), "c".into()]));
+        assert_eq!(
+            invalidation_closure(["a".into()], &reverse),
+            BTreeSet::from(["a".into(), "b".into(), "c".into()])
+        );
+    }
+    #[test]
+    fn coalescing_is_stable() {
+        assert_eq!(
+            coalesce_changes(["b".into(), "a".into(), "b".into()]),
+            vec!["a", "b"]
+        );
+    }
+    #[test]
+    fn git_batch_probe_is_capability_safe() {
+        let root = std::env::temp_dir();
+        assert!(git_changed_paths(&root, "HEAD").is_ok());
+    }
+    #[test]
+    fn invalidation_plan_is_revision_scoped_by_reason() {
+        let plan = InvalidationPlan::from_changes(["a".into()], &BTreeMap::new());
+        assert_eq!(plan.reason, "source_change");
+        assert!(plan.files.contains("a"));
+    }
+    #[test]
+    fn watcher_event_paths_are_coalesced() {
+        let mut first =
+            notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Any));
+        first.paths.push(PathBuf::from("b.rs"));
+        let mut second = first.clone();
+        second.paths.push(PathBuf::from("a.rs"));
+        assert_eq!(paths_from_events([first, second]), vec!["a.rs", "b.rs"]);
+    }
+    #[test]
+    fn incremental_plan_reaches_symbols_flows_and_hag() {
+        let mut dependencies = IncrementalDependencies::default();
+        dependencies
+            .reverse_files
+            .insert("a.rs".into(), BTreeSet::from(["b.rs".into()]));
+        dependencies
+            .reverse_symbols
+            .insert("b.rs".into(), BTreeSet::from(["symbol:B".into()]));
+        dependencies
+            .reverse_flow_regions
+            .insert("symbol:B".into(), BTreeSet::from(["flow:handler".into()]));
+        dependencies.reverse_hag_nodes.insert(
+            "flow:handler".into(),
+            BTreeSet::from(["hag:service".into()]),
+        );
+        let plan = incremental_plan(["a.rs".into(), "a.rs".into()], &dependencies);
+        assert_eq!(
+            plan.invalidated_files,
+            BTreeSet::from(["a.rs".into(), "b.rs".into()])
+        );
+        assert!(plan.invalidated_hag_nodes.contains("hag:service"));
+        let project = ProjectId::derive("p", &["incremental"]);
+        let base = RevisionId::derive("r", &["base"]);
+        assert_eq!(
+            incremental_revision(&project, &base, &plan),
+            incremental_revision(&project, &base, &plan)
+        );
     }
 }

@@ -29,6 +29,10 @@ macro_rules! canonical_id {
             pub fn as_str(&self) -> &str {
                 &self.0
             }
+            pub fn from_serialized(value: String) -> Option<Self> {
+                (value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+                    .then_some(Self(value))
+            }
         }
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -172,6 +176,39 @@ pub struct Confidence {
     pub runtime: f32,
     pub overall: f32,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EvidenceRecord {
+    pub id: EvidenceId,
+    pub provider: String,
+    pub provider_version: Option<String>,
+    pub fact_class: FactClass,
+    pub source_span: Option<SourceSpan>,
+    pub inputs: Vec<EvidenceId>,
+    pub claim_kind: String,
+    pub unknown: bool,
+}
+impl EvidenceRecord {
+    pub fn validate(&self) -> Result<(), EvidenceError> {
+        if self.provider.is_empty() || self.claim_kind.is_empty() {
+            return Err(EvidenceError::MissingProvenance);
+        }
+        if self.unknown && self.fact_class != FactClass::Unknown {
+            return Err(EvidenceError::InvalidUnknown);
+        }
+        if !self.unknown && self.fact_class != FactClass::Unknown && self.source_span.is_none() {
+            return Err(EvidenceError::MissingProvenance);
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum EvidenceError {
+    #[error("evidence claim is missing provenance")]
+    MissingProvenance,
+    #[error("unknown claims must have UNKNOWN fact class")]
+    InvalidUnknown,
+}
 impl Confidence {
     pub fn new(structural: f32, semantic: f32, runtime: f32) -> Result<Self, IdentityError> {
         for value in [structural, semantic, runtime] {
@@ -193,6 +230,18 @@ impl Confidence {
             runtime: 0.0,
             overall: 0.0,
         }
+    }
+    pub fn aggregate(values: &[Self]) -> Self {
+        if values.is_empty() {
+            return Self::unknown();
+        }
+        let n = values.len() as f32;
+        Self::new(
+            values.iter().map(|v| v.structural).sum::<f32>() / n,
+            values.iter().map(|v| v.semantic).sum::<f32>() / n,
+            values.iter().map(|v| v.runtime).sum::<f32>() / n,
+        )
+        .expect("means of valid confidence values remain valid")
     }
 }
 
@@ -263,5 +312,47 @@ mod tests {
         let json = serde_json::to_string(&SchemaEnvelope::current(ProjectId::derive("p", &["x"])))
             .unwrap();
         let _: SchemaEnvelope<ProjectId> = serde_json::from_str(&json).unwrap();
+    }
+    #[test]
+    fn provenance_requires_source_or_explicit_unknown() {
+        let source = SourceIdentity::from_bytes(Path::new("a.rs"), b"x").unwrap();
+        let span = SourceSpan {
+            source,
+            start: SourcePosition {
+                line: 1,
+                column: 0,
+                byte: 0,
+            },
+            end: SourcePosition {
+                line: 1,
+                column: 1,
+                byte: 1,
+            },
+        };
+        let known = EvidenceRecord {
+            id: EvidenceId::derive("e", &["1"]),
+            provider: "tree-sitter".into(),
+            provider_version: None,
+            fact_class: FactClass::Deterministic,
+            source_span: Some(span),
+            inputs: vec![],
+            claim_kind: "syntax".into(),
+            unknown: false,
+        };
+        assert!(known.validate().is_ok());
+        let mut unknown = known;
+        unknown.source_span = None;
+        unknown.unknown = true;
+        unknown.fact_class = FactClass::Unknown;
+        assert!(unknown.validate().is_ok());
+    }
+    #[test]
+    fn confidence_aggregation_is_deterministic_and_empty_is_unknown() {
+        assert_eq!(Confidence::aggregate(&[]), Confidence::unknown());
+        let value = Confidence::aggregate(&[
+            Confidence::new(1.0, 0.0, 0.0).unwrap(),
+            Confidence::new(0.0, 1.0, 1.0).unwrap(),
+        ]);
+        assert_eq!(value.overall, 0.5);
     }
 }
